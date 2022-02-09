@@ -5,7 +5,7 @@ import argparse
 import webdataset as wds
 from multiroot_image_folder import MultirootImageFolder
 
-parser = argparse.ArgumentParser('Generate sharded dataset from original image directory.')
+parser = argparse.ArgumentParser('Generate sharded dataset from a list of image directories')
 parser.add_argument('--filekey', action='store_true', help='use file as key (default: index)')
 parser.add_argument('--maxsize', type=float, default=1e16, help='max size of each shard (set big if you want a single shard)')
 parser.add_argument('--maxcount', type=float, default=1e9, help='max number of records in each shard (set big if you want a single shard)')
