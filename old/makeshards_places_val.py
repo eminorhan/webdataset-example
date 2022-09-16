@@ -46,12 +46,15 @@ def write_dataset(imgdirs, imgname, base=""):
 
     counter = 0
 
+    with open('places365_val.txt') as f:
+        targets = f.readlines()
+    
     with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxcount)) as sink:
         for i in indexes:
 
             # Internal information from the image dataset instance: the file name and the numerical class.
-            fname, cls = ds.imgs[i]
-            assert cls == ds.targets[i]
+            fname, _ = ds.imgs[i]
+            cls = int(targets[i].split()[-1])
 
             # Read the JPEG-compressed image file contents.
             image = readfile(fname)
@@ -71,8 +74,7 @@ def write_dataset(imgdirs, imgname, base=""):
             sink.write(sample)
 
             # Perhaps print out a bunch of useful stuff:
-            if counter % 10000 == 0:
-                print("counter, i, fname, cls", counter, i, fname, cls)      
+            print("counter, i, fname, cls", counter, i, fname, cls)      
 
             counter += 1              
 

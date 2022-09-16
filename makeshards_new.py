@@ -1,7 +1,9 @@
 import os
 import os.path
 import random
+import math
 import argparse
+import torch
 import webdataset as wds
 from multiroot_image_folder import MultirootImageFolder
 
@@ -9,12 +11,17 @@ parser = argparse.ArgumentParser('Generate sharded dataset from a list of image 
 parser.add_argument('--filekey', action='store_true', help='use file as key (default: index)')
 parser.add_argument('--maxsize', type=float, default=1e16, help='max size of each shard (set big if you want a single shard)')
 parser.add_argument('--maxcount', type=float, default=1e6, help='max number of records in each shard (set big if you want a single shard)')
+parser.add_argument('--data-fraction', type=float, default=1.0, help='fraction of data to use')
+parser.add_argument('--seed', type=int, default=1, help='random seed')
 parser.add_argument('--shards', default='', help='directory where shards are written')
 parser.add_argument('--data-dirs', nargs='+', help='list of paths to datasets')
 parser.add_argument('--dataset-name', default='sharded-dataset', help='name of sharded dataset')
+parser.add_argument('--cache-path', default='sharded-dataset.pth', help='name of sharded dataset')
 
 args = parser.parse_args()
 print(args)
+
+random.seed(args.seed)
 
 # assert args.maxsize > 1e8
 # assert args.maxcount < 1e10
@@ -30,19 +37,34 @@ def write_dataset(imgdirs, imgname, base=""):
 
     # We're using a multi-folder generalization of the torchvision ImageFolder class to parse the metadata; 
     # however, we will read the compressed images directly from disk (to avoid having to reencode them)
-    ds = MultirootImageFolder(imgdirs, 1.0)
+    if args.cache_path and os.path.exists(args.cache_path):
+        print("Loading training dataset from {}".format(args.cache_path))
+        ds = torch.load(args.cache_path)
+    else:
+        print("Building training dataset from scratch")
+        ds = MultirootImageFolder(imgdirs, 1.0)
+        torch.save(ds, args.cache_path)
+
     nimages = len(ds.imgs)
-    print("# of images", nimages)
+    print("# of all images", nimages)
 
     # for key in list(ds.class_to_idx.keys()):
     #     print(key, ds.class_to_idx[key])
 
-    # We shuffle the indexes to make sure that we don't get any large sequences of a single class in the dataset.
     indexes = list(range(nimages))
+
+    # keep a certain fraction of the images
+    if args.data_fraction < 1.0:
+        num_images = math.ceil(nimages * args.data_fraction)
+        start_ind = random.randint(0, nimages-num_images-1)
+        print('Image start index:', start_ind)
+        indexes = indexes[start_ind:(start_ind+num_images)]
+        print("# of images kept", len(indexes))
+
     random.shuffle(indexes)
 
     # This is the output pattern under which we write shards.
-    pattern = os.path.join(base, f"{imgname}_%06d.tar")
+    pattern = os.path.join(base, f"{imgname}_{args.data_fraction}_{args.seed}_%06d.tar")
 
     counter = 0
 

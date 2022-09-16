@@ -1,4 +1,0 @@
-Namespace(data_dirs=['/misc/vlgscratch5/LakeGroup/emin/sayavakepicut/1fps_300s/S', '/misc/vlgscratch5/LakeGroup/emin/sayavakepicut/1fps_300s/A', '/misc/vlgscratch5/LakeGroup/emin/sayavakepicut/1fps_300s/Y'], dataset_name='SAY_1fps_300', filekey=False, maxcount=1000000000.0, maxsize=1e+16, shards='')
-# nimages 1723909
-# writing SAY_1fps_300_000000.tar 0 0.0 GB 0
-Done

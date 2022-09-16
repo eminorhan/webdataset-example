@@ -34,20 +34,21 @@ def write_dataset(imgdirs, imgname, base=""):
     nimages = len(ds.imgs)
     print("# of images", nimages)
 
-    # for key in list(ds.class_to_idx.keys()):
-    #     print(key, ds.class_to_idx[key])
+    for key in list(ds.class_to_idx.keys()):
+        print(key, ds.class_to_idx[key])
 
     # We shuffle the indexes to make sure that we don't get any large sequences of a single class in the dataset.
     indexes = list(range(nimages))
     random.shuffle(indexes)
 
-    # This is the output pattern under which we write shards.
-    pattern = os.path.join(base, f"{imgname}_%06d.tar")
+    num_data = nimages
+    # num_data = int(0.1 * nimages) + 1
 
+    # Train
+    pattern = os.path.join(base, f"{imgname}_train_%06d.tar")
     counter = 0
-
     with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxcount)) as sink:
-        for i in indexes:
+        for i in indexes[:(num_data // 2)]:
 
             # Internal information from the image dataset instance: the file name and the numerical class.
             fname, cls = ds.imgs[i]
@@ -71,7 +72,40 @@ def write_dataset(imgdirs, imgname, base=""):
             sink.write(sample)
 
             # Perhaps print out a bunch of useful stuff:
-            if counter % 10000 == 0:
+            if counter % 1 == 0:
+                print("counter, i, fname, cls", counter, i, fname, cls)      
+
+            counter += 1              
+
+    # Val
+    pattern = os.path.join(base, f"{imgname}_val_%06d.tar")
+    counter = 0
+    with wds.ShardWriter(pattern, maxsize=int(args.maxsize), maxcount=int(args.maxcount)) as sink:
+        for i in indexes[(num_data // 2):num_data]:
+
+            # Internal information from the image dataset instance: the file name and the numerical class.
+            fname, cls = ds.imgs[i]
+            assert cls == ds.targets[i]
+
+            # Read the JPEG-compressed image file contents.
+            image = readfile(fname)
+
+            # Construct a unique key from the filename.
+            key = os.path.splitext(os.path.basename(fname))[0]
+
+            # Useful check.
+            # assert key not in all_keys  # for some reason this gives an error sometimes
+            all_keys.add(key)
+
+            # Construct a sample.
+            xkey = key if args.filekey else "%07d" % i
+            sample = {"__key__": xkey, "jpg": image, "cls": cls}
+
+            # Write the sample to the sharded tar archives.
+            sink.write(sample)
+
+            # Perhaps print out a bunch of useful stuff:
+            if counter % 1 == 0:
                 print("counter, i, fname, cls", counter, i, fname, cls)      
 
             counter += 1              
